@@ -13,10 +13,6 @@ export function subStoreTransformPlugin() {
     let openApiFileSeen = false;
     let downloadPatchApplied = 0;
     let downloadFileSeen = false;
-    let restfulDownloadPatchApplied = 0;
-    let restfulDownloadFileSeen = false;
-    let shadowrocketProducerPatchApplied = 0;
-    let shadowrocketProducerFileSeen = false;
     let processorsPatchApplied = 0;
     let processorsFileSeen = false;
     let openApiDebugPatchApplied = 0;
@@ -29,16 +25,6 @@ export function subStoreTransformPlugin() {
         ['express.js', () => expressFileSeen, () => expressPatchApplied],
         ['open-api.js', () => openApiFileSeen, () => openApiPatchApplied],
         ['download.js', () => downloadFileSeen, () => downloadPatchApplied],
-        [
-            'restful/download.js',
-            () => restfulDownloadFileSeen,
-            () => restfulDownloadPatchApplied,
-        ],
-        [
-            'producers/shadowrocket.js',
-            () => shadowrocketProducerFileSeen,
-            () => shadowrocketProducerPatchApplied,
-        ],
         ['processors/index.js', () => processorsFileSeen, () => processorsPatchApplied],
         ['core/app.js', () => openApiDebugFileSeen, () => openApiDebugPatchApplied],
         ['utils/rs.js', () => rsFileSeen, () => rsPatchApplied],
@@ -304,102 +290,6 @@ export class OpenAPI`,
                 const missing = requiredMarkers.filter((m) => !contents.includes(m));
                 if (missing.length > 0) {
                     this.error(`[sub-store-transform] open-api.js 补丁自检失败：缺少片段: ${missing.join(', ')}`);
-                }
-            }
-
-            if (id.includes('sub-store/backend/src/restful/download.js')) {
-                restfulDownloadFileSeen = true;
-                const marker =
-                    '__SUB_STORE_WORKERS_PATCH__SHADOWROCKET_ALWAYS_USE_CONNECT_QUERY__';
-                if (!contents.includes(marker)) {
-                    const beforeRestfulDownload = contents;
-                    contents = contents.replace(
-                        `        includeUnsupportedProxy,
-        resultFormat,`,
-                        `        includeUnsupportedProxy,
-        alwaysUseConnect,
-        resultFormat,`,
-                    );
-                    contents = contents.replace(
-                        `    const prettyYaml = req.query.prettyYaml ?? req.query['pretty-yaml'];`,
-                        `    const prettyYaml = req.query.prettyYaml ?? req.query['pretty-yaml'];
-    // ${marker}
-    const shadowrocketAlwaysUseConnect =
-        alwaysUseConnect ?? req.query['always-use-connect'];`,
-                    );
-                    contents = contents.replace(
-                        `                    'include-unsupported-proxy': includeUnsupportedProxy,
-                    useMihomoExternal,`,
-                        `                    'include-unsupported-proxy': includeUnsupportedProxy,
-                    'always-use-connect': shadowrocketAlwaysUseConnect,
-                    useMihomoExternal,`,
-                    );
-
-                    if (contents === beforeRestfulDownload) {
-                        this.error(
-                            '[sub-store-transform] restful/download.js 补丁未应用：未命中查询参数或 produceOpts 片段',
-                        );
-                    }
-                    if (
-                        !contents.includes(marker) ||
-                        !contents.includes(
-                            `'always-use-connect': shadowrocketAlwaysUseConnect`,
-                        )
-                    ) {
-                        this.error(
-                            '[sub-store-transform] restful/download.js 补丁自检失败：alwaysUseConnect 未传入生产器',
-                        );
-                    }
-                    restfulDownloadPatchApplied += 1;
-                }
-            }
-
-            if (
-                id.includes(
-                    'sub-store/backend/src/core/proxy-utils/producers/shadowrocket.js',
-                )
-            ) {
-                shadowrocketProducerFileSeen = true;
-                const marker =
-                    '__SUB_STORE_WORKERS_PATCH__SHADOWROCKET_ALWAYS_USE_CONNECT_PRODUCER__';
-                if (!contents.includes(marker)) {
-                    const beforeShadowrocketProducer = contents;
-                    contents = contents.replace(
-                        `    const produce = (proxies, type, opts = {}) => {
-        const list = proxies`,
-                        `    const produce = (proxies, type, opts = {}) => {
-        // ${marker}
-        const alwaysUseConnect = /^(1|true|yes|on)$/i.test(
-            String(opts['always-use-connect'] ?? ''),
-        );
-        const list = proxies`,
-                    );
-                    contents = contents.replace(
-                        `            .map((proxy) => {
-                if (proxy.type === 'vmess') {`,
-                        `            .map((proxy) => {
-                if (proxy.type === 'http' && alwaysUseConnect) {
-                    proxy['always-use-connect'] = true;
-                }
-                if (proxy.type === 'vmess') {`,
-                    );
-
-                    if (contents === beforeShadowrocketProducer) {
-                        this.error(
-                            '[sub-store-transform] shadowrocket.js 补丁未应用：未命中 produce/map 片段',
-                        );
-                    }
-                    if (
-                        !contents.includes(marker) ||
-                        !contents.includes(
-                            `proxy['always-use-connect'] = true`,
-                        )
-                    ) {
-                        this.error(
-                            '[sub-store-transform] shadowrocket.js 补丁自检失败：HTTP 节点未启用 always-use-connect',
-                        );
-                    }
-                    shadowrocketProducerPatchApplied += 1;
                 }
             }
 
