@@ -127,7 +127,7 @@ jobs:
           cd build
           cp wrangler.toml.example wrangler.toml
           JWT_SECRET='${{ secrets.JWT_SECRET }}'
-          ESCAPED_JWT_SECRET=$(printf '%s' "$JWT_SECRET" | sed -e 's/[\\/&]/\\\\&/g')
+          ESCAPED_JWT_SECRET=$(printf '%s' "$JWT_SECRET" | sed -e 's/[&]/\\&/g' -e 's/"/\\"/g')
           sed -i "s|__JWT_SECRET__|$ESCAPED_JWT_SECRET|g" wrangler.toml
 
       - name: Install backend dependencies
