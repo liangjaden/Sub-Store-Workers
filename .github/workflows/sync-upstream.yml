@@ -1,0 +1,37 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "30 0 */3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v6
+        with:
+          ref: multi-tenant
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge upstream
+        run: |
+          git remote add upstream https://github.com/SaintWe/Sub-Store-Workers.git
+          git fetch upstream multi-tenant
+          before="$(git rev-parse HEAD)"
+          git merge --no-edit upstream/multi-tenant
+          after="$(git rev-parse HEAD)"
+          if [ "$before" = "$after" ]; then
+            echo "Already up to date."
+            exit 0
+          fi
+          git push origin HEAD:multi-tenant
