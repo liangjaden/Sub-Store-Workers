@@ -137,7 +137,10 @@ export default function getParser() {
                 }
             }
 
-            if (id.includes('sub-store/backend/src/core/proxy-utils/parsers/peggy/')) {
+            if (
+                id.includes('sub-store/backend/src/core/proxy-utils/parsers/peggy/') &&
+                contents.includes('peggy.generate')
+            ) {
                 contents = precompilePeggyParser(contents, id, this);
             }
 
